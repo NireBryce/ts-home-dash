@@ -1,7 +1,5 @@
-# Import modules from .just directory (recursively searches subdirectories)
-import? '.just/**/*.just'
+import './.just/.modules.just'
 
-# Default recipe - show available commands
-default:
-    @just --list
+_default:
+    @just --list --unsorted --list-submodules
 

@@ -1,3 +1,9 @@
+npm:
+
+_npm: 
+# npm
+npm-:
+
 # Initialize a new npm project with TypeScript
 npm-init-ts name:
     #!/usr/bin/env zsh

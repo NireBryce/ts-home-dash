@@ -1,5 +1,8 @@
-# Variables
-nvm_dir := env_var_or_default('NVM_DIR', env_var('HOME') + '/.nvm')
+nvm:
+
+#nvm
+nvm------start:
+
 
 # Load nvm into the current shell and print Node version
 nvm-load:
@@ -53,3 +56,4 @@ nvm-list:
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm list
 
+nvm------end:
