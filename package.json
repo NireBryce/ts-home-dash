@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "A learning project for typescript",
     "main": "dist/server.js",
+    "type": "module",
     "scripts": {
         "dev": "tsx watch src/server.ts",
         "build": "tsc",
