@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeScript Home Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h2 {
+            font-size: 1.4em;
+            margin-bottom: 16px;
+            color: #667eea;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .stat:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .stat-value {
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .error {
+            color: #e74c3c;
+            padding: 12px;
+            background: #fee;
+            border-radius: 6px;
+        }
+        
+        #current-time {
+            font-size: 2em;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Home Dashboard</h1>
+            <div id="current-time">--:--:--</div>
+        </header>
+        
+        <div class="dashboard">
+            <!-- System Info Card -->
+            <div class="card">
+                <h2>💻 System</h2>
+                <div id="system-info" class="loading">Loading...</div>
+            </div>
+            
+            <!-- Weather Card -->
+            <div class="card">
+                <h2>🌤️ Weather</h2>
+                <div id="weather-info" class="loading">Loading...</div>
+            </div>
+            
+            <!-- Quick Links Card -->
+            <div class="card">
+                <h2>🔗 Quick Links</h2>
+                <div id="quick-links" class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Update time every second
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleTimeString();
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // Fetch system info
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch('/api/system');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const { cpu, memory, uptime } = data.data;
+                    document.getElementById('system-info').innerHTML = `
+                        <div class="stat">
+                            <span class="stat-label">CPU Usage</span>
+                            <span class="stat-value">${cpu.usage.toFixed(1)}%</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">CPU Cores</span>
+                            <span class="stat-value">${cpu.cores}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Memory</span>
+                            <span class="stat-value">${memory.percentage.toFixed(1)}%</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Uptime</span>
+                            <span class="stat-value">${Math.floor(uptime / 3600)}h</span>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('system-info').innerHTML = 
+                    '<div class="error">Failed to load system info</div>';
+            }
+        }
+        
+        // Fetch weather info
+        async function loadWeatherInfo() {
+            try {
+                const response = await fetch('/api/weather');
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const weather = data.data;
+                    document.getElementById('weather-info').innerHTML = `
+                        <div class="stat">
+                            <span class="stat-label">Temperature</span>
+                            <span class="stat-value">${weather.temperature}°F</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Condition</span>
+                            <span class="stat-value">${weather.condition}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Humidity</span>
+                            <span class="stat-value">${weather.humidity}%</span>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('weather-info').innerHTML = 
+                        '<div class="loading">Weather unavailable</div>';
+                }
+            } catch (error) {
+                document.getElementById('weather-info').innerHTML = 
+                    '<div class="error">Failed to load weather</div>';
+            }
+        }
+        
+        // Load data on page load
+        loadSystemInfo();
+        loadWeatherInfo();
+        
+        // Refresh data every 30 seconds
+        setInterval(() => {
+            loadSystemInfo();
+            loadWeatherInfo();
+        }, 30000);
+    </script>
+</body>
+</html>
