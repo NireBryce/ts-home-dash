@@ -3,104 +3,182 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import type { SystemInfo, WeatherInfo, ApiResponse } from './types/dashboard.js';
+import { systemInfoSchema, weatherInfoSchema, apiResponseSchema } from './schemas/validation.js';
+import { handleApiError, ApiErrorClass } from './utils/errorHandler.js';
 
-// ES modules don't have __dirname, so we create it
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-//create a fastify instance
 const server = Fastify({
-    logger: true,
-
+  logger: true
 });
 
-// Register static file serving for our HTML
-// This teaches us about Fastify plugins
+// Register static file serving
 await server.register(import('@fastify/static'), {
   root: path.join(__dirname, 'public'),
-  prefix: '/' // Serve files at root path
+  prefix: '/'
 });
 
-// Health check endpoint
-server.get('/health', async (request, reply) => {
+// Health check
+server.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
 });
 
-// System info endpoint - properly typed!
-server.get('/api/system', async (request, reply) => {
-  // Notice how we're typing our response with our custom types
-  const cpus = os.cpus();
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-  
-  // Let's calculate CPU usage
-  // This is simplified - averages current CPU tick usage
-  const cpuUsage = cpus.reduce((acc, cpu) => {
-    const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
-    const idle = cpu.times.idle;
-    return acc + ((total - idle) / total) * 100;
-  }, 0) / cpus.length;
-  
-  // Build our SystemInfo object
-  // TypeScript checks that this matches our interface!
-  const systemInfo: SystemInfo = {
-    cpu: {
-      usage: cpuUsage,
-      cores: cpus.length
-    },
-    memory: {
-      total: totalMem,
-      used: usedMem,
-      percentage: (usedMem / totalMem) * 100
-    },
-    disk: {
-      // For now, we'll use placeholder values
-      // We'll improve this later with a proper disk usage library
-      total: 500_000_000_000, // 500GB
-      used: 250_000_000_000,  // 250GB
-      percentage: 50
-    },
-    uptime: os.uptime()
-  };
-  
-  // Wrap in our ApiResponse generic type
-  // TypeScript infers: ApiResponse<SystemInfo>
-  const response: ApiResponse<SystemInfo> = {
-    success: true,
-    data: systemInfo,
-    timestamp: new Date().toISOString()
-  };
-  
-  return response;
+// System info endpoint with schema validation
+server.get('/api/system', {
+  schema: {
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: systemInfoSchema,
+          timestamp: { type: 'string' }
+        }
+      }
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const cpus = os.cpus();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    
+    // Calculate CPU usage with error handling
+    const cpuUsage = cpus.reduce((acc, cpu) => {
+      const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+      const idle = cpu.times.idle;
+      // Guard against division by zero
+      return acc + (total > 0 ? ((total - idle) / total) * 100 : 0);
+    }, 0) / cpus.length;
+    
+    const systemInfo: SystemInfo = {
+      cpu: {
+        usage: Math.round(cpuUsage * 10) / 10, // Round to 1 decimal
+        cores: cpus.length
+      },
+      memory: {
+        total: totalMem,
+        used: usedMem,
+        percentage: Math.round((usedMem / totalMem) * 1000) / 10
+      },
+      disk: {
+        total: 500_000_000_000,
+        used: 250_000_000_000,
+        percentage: 50
+      },
+      uptime: os.uptime()
+    };
+    
+    const response: ApiResponse<SystemInfo> = {
+      success: true,
+      data: systemInfo,
+      timestamp: new Date().toISOString()
+    };
+    
+    return response;
+    
+  } catch (error) {
+    // Use our error handler
+    handleApiError(reply, error);
+  }
 });
 
-// Weather endpoint - with mock data for now
-server.get('/api/weather', async (request, reply) => {
-  // For learning purposes, we'll return mock data
+// Weather endpoint with validation and error handling
+server.get('/api/weather', {
+  schema: {
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            oneOf: [
+              weatherInfoSchema,
+              { type: 'null' }
+            ]
+          },
+          timestamp: { type: 'string' }
+        }
+      }
+    }
+  }
+}, async (request, reply) => {
+  try {
+    // Simulate fetching weather data
+    // This could fail, so we wrap it in try-catch
+    const weatherData = await fetchWeatherData();
+    
+    const response: ApiResponse<WeatherInfo | null> = {
+      success: true,
+      data: weatherData,
+      timestamp: new Date().toISOString()
+    };
+    
+    return response;
+    
+  } catch (error) {
+    handleApiError(reply, error);
+  }
+});
+
+// Helper function that simulates fetching weather
+// In a real app, this would call an external API
+async function fetchWeatherData(): Promise<WeatherInfo | null> {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 100));
   
-  // Simulate that weather might not be available
-  // This demonstrates the WeatherInfo | null type
-  const weatherAvailable = true; // Change to false to test null case
+  // Simulate possible failure (10% chance)
+  if (Math.random() < 0.1) {
+    throw new ApiErrorClass(
+      'Weather service temporarily unavailable',
+      'WEATHER_SERVICE_ERROR',
+      503
+    );
+  }
   
-  const weatherData: WeatherInfo | null = weatherAvailable ? {
-    temperature: 72,
-    condition: 'Partly Cloudy',
-    weatherType: 'cloudy', // TypeScript ensures this is one of our allowed values!
-    humidity: 65,
+  // Return mock data
+  const conditions: Array<WeatherInfo['weatherType']> = 
+    ['sunny', 'cloudy', 'rainy', 'snowy'];
+  
+  const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+  
+  if (!randomCondition) {
+    // This demonstrates handling array access with noUncheckedIndexedAccess
+    throw new ApiErrorClass(
+      'Failed to determine weather condition',
+      'WEATHER_DATA_ERROR'
+    );
+  }
+  
+  return {
+    temperature: Math.floor(Math.random() * 30) + 60, // 60-90°F
+    condition: randomCondition.charAt(0).toUpperCase() + randomCondition.slice(1),
+    weatherType: randomCondition,
+    humidity: Math.floor(Math.random() * 40) + 40, // 40-80%
     lastUpdated: new Date().toISOString()
-  } : null;
-  
-  const response: ApiResponse<WeatherInfo | null> = {
-    success: true,
-    data: weatherData,
-    timestamp: new Date().toISOString()
   };
-  
-  return response;
+}
+
+// Error handler for routes that don't exist
+server.setNotFoundHandler((request, reply) => {
+  reply.status(404).send({
+    success: false,
+    error: {
+      message: 'Route not found',
+      code: 'NOT_FOUND'
+    },
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Start the server
+// Global error handler
+server.setErrorHandler((error, request, reply) => {
+  server.log.error(error);
+  handleApiError(reply, error);
+});
+
 const start = async () => {
   try {
     await server.listen({ port: 3000, host: '0.0.0.0' });
