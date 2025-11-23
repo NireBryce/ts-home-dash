@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
 import os from 'os';
 import type { SystemInfo, WeatherInfo, ApiResponse } from './types/dashboard.js';
 import { systemInfoSchema, weatherInfoSchema, apiResponseSchema } from './schemas/validation.js';
@@ -13,10 +14,15 @@ const server = Fastify({
   logger: true
 });
 
-// Register static file serving
-await server.register(import('@fastify/static'), {
-  root: path.join(__dirname, 'public'),
-  prefix: '/'
+// Serve the HTML page directly
+server.get('/', async (request, reply) => {
+  try {
+    const htmlPath = path.join(__dirname, 'public', 'index.html');
+    const html = await fs.readFile(htmlPath, 'utf-8');
+    reply.type('text/html').send(html);
+  } catch (error) {
+    reply.status(500).send('Error loading dashboard');
+  }
 });
 
 // Health check

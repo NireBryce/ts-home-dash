@@ -1,28 +1,25 @@
 {
-    "name": "ts-home-dash",
-    "version": "1.0.0",
-    "description": "A learning project for typescript",
-    "main": "dist/server.js",
-    "type": "module",
-    "scripts": {
-        "dev": "tsx watch src/server.ts",
-        "build": "tsc",
-        "start": "node dist/server.js",
-        "typecheck": "tsc --noEmit"
-    },
-    "keywords": [
-        "typescript",
-        "dashboard"
-    ],
-    "author": "",
-    "license": "",
-    "dependencies": {
-        "@fastify/static": "^6.12.0",
-        "fastify": "^4.25.0"
-    },
-    "devDependencies": {
-        "@types/node": "^20.19.25",
-        "tsx": "^4.7.0",
-        "typescript": "^5.9.3"
-    }
+  "name": "ts-home-dashboard",
+  "version": "1.0.0",
+  "description": "A learning project for TypeScript with a home dashboard",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": ["typescript", "dashboard", "learning"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "fastify": "^4.25.0",
+    "@fastify/static": "^6.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
 }
